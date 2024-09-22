@@ -1,136 +1,119 @@
-import { useRef } from "react";
-import * as bodyPix from "@tensorflow-models/body-pix";
-import "@tensorflow/tfjs";
+import { useState, useEffect } from "react";
+import { Toaster, toast } from "react-hot-toast";
+import Loader from "./components/Loader";
 
 function App() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(
+    null
+  );
 
-  // Load video stream and BodyPix model
+  // Function to get the video stream
   const getUserVideo = async () => {
-    const videoStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-    });
-
-    // if esc key is pressed, close the video stream and access of the camera will be denied
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        videoStream.getTracks().forEach((track) => track.stop());
-        (document?.getElementById("my_modal_1") as HTMLDialogElement)?.close();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setVideoStream(stream);
+      if (videoElement) {
+        videoElement.srcObject = stream;
+        videoElement.play();
       }
-    });
-
-    const videoElement = videoRef.current;
-    if (videoElement) {
-      videoElement.srcObject = videoStream;
-      videoElement.style.transform = "scaleX(-1)"; // Mirror video
-      videoElement.play();
-
-      // Ensure video dimensions are set when metadata is loaded
-      videoElement.onloadedmetadata = () => {
-        if (canvasRef.current) {
-          canvasRef.current.width = videoElement.videoWidth;
-          canvasRef.current.height = videoElement.videoHeight;
-        }
-      };
-    }
-
-    // Load BodyPix model
-    const net = await bodyPix.load();
-    blurBackground(net); // Start applying blur effect
-  };
-
-  // Function to apply background blur while keeping the user's face clear
-  const blurBackground = async (net: bodyPix.BodyPix) => {
-    const videoElement = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (videoElement && canvas) {
-      const ctx = canvas.getContext("2d");
-
-      const applyBlur = async () => {
-        // Clear the canvas for each new frame
-        ctx?.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Get segmentation for the video frame
-        const segmentation = await net.segmentPerson(videoElement, {
-          internalResolution: "medium",
-          segmentationThreshold: 0.7,
-        });
-
-        // Apply blur effect
-        const backgroundBlurAmount = 30; // Adjust to your preference
-        const edgeBlurAmount = 5;
-
-        bodyPix.drawBokehEffect(
-          canvas,
-          videoElement,
-          segmentation,
-          backgroundBlurAmount,
-          edgeBlurAmount,
-          true // Mirror the video for user convenience
-        );
-
-        // Keep the loop going for real-time updates
-        requestAnimationFrame(applyBlur);
-      };
-
-      // Start the background blur effect
-      applyBlur();
+    } catch (error) {
+      toast.error("Error accessing the camera. Please check permissions.");
     }
   };
 
-  // Handle authentication button click
-  const handleAuthentication = () => {
-    getUserVideo();
-    return (
-      document?.getElementById("my_modal_1") as HTMLDialogElement
-    )?.showModal();
+  // Handle opening modal and starting camera
+  const handleAuthentication = async () => {
+    toast("Authenticating...", { icon: "🔒" });
+    setLoading(true); // Show shimmer effect
+    await getUserVideo();
+    setTimeout(() => {
+      setLoading(false); // Stop shimmer after 1 second
+    }, 1000);
+    (document.getElementById("my_modal_1") as HTMLDialogElement)?.showModal();
   };
 
-  // Close the camera access and stop the video stream
+  // Close camera when the modal is closed
   const closeCamera = () => {
-    const videoElement = videoRef.current;
-    if (videoElement) {
-      const videoStream = videoElement.srcObject as MediaStream; // Cast srcObject to MediaStream
-      videoStream.getTracks().forEach((track) => track.stop()); // Access getTracks method on MediaStream
+    if (videoStream) {
+      videoStream.getTracks().forEach((track) => track.stop()); // Stop all tracks
+      setVideoStream(null); // Clear video stream
     }
-    (document?.getElementById("my_modal_1") as HTMLDialogElement)?.close();
-  }
+    (document.getElementById("my_modal_1") as HTMLDialogElement)?.close();
+  };
+
+  // Automatically close camera when modal is closed via ESC key or backdrop click
+  useEffect(() => {
+    const modalElement = document.getElementById(
+      "my_modal_1"
+    ) as HTMLDialogElement;
+
+    if (modalElement) {
+      modalElement.addEventListener("close", closeCamera); // Event listener for modal close
+    }
+
+    return () => {
+      if (modalElement) {
+        modalElement.removeEventListener("close", closeCamera); // Clean up event listener
+      }
+    };
+  }, [videoStream]);
+
+  // Effect to update video element reference once the video element is rendered
+  useEffect(() => {
+    if (videoElement && videoStream) {
+      videoElement.srcObject = videoStream;
+      videoElement.play();
+    }
+  }, [videoElement, videoStream]);
 
   return (
-    <div className="flex w-screen h-screen justify-center items-center">
-      <button className="btn btn-secondary" onClick={handleAuthentication}>
+    <div
+      id="bg-image"
+      className="flex w-screen h-screen justify-center items-center bg-gray-100"
+    >
+      <Toaster />
+      <button
+        className="btn btn-warning btn-sm"
+        id="position-btn"
+        onClick={handleAuthentication}
+      >
         Authenticate
       </button>
+
       <dialog id="my_modal_1" className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg">Facial Authentication</h3>
-          <p className="py-4 add-video">
-            <video
-              ref={videoRef}
-              style={{
-                transform: "scaleX(-1)",
-                display: "block",
-                width: "100%",
-                height: "auto",
-              }} // Make video visible
-              autoPlay
-              muted
-            />
-            <canvas
-              ref={canvasRef}
-              style={{ position: "absolute", top: 0, left: 0 }} // Overlay canvas
-            />
-            Press ESC key or click the button below to close
-          </p>
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn" onClick={closeCamera} >Close</button>
-            </form>
+        <div className="modal-box relative bg-white rounded-lg shadow-lg min-w-[50vw]">
+          <h3 className="font-bold text-lg text-center mb-4">
+            Facial Authentication
+          </h3>
+
+          <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+            {loading ? (
+              <div className="flex justify-center items-center absolute top-44 right-80">
+                {" "}
+                <span className="loading loading-bars loading-lg scale-150"></span>
+              </div>
+            ) : (
+              <video
+                className="absolute inset-0 w-full h-full transform scale-x-[-1] object-cover"
+                autoPlay
+                muted
+                ref={(video) => setVideoElement(video)} // Assign the video element
+              />
+            )}
+          </div>
+            <div>
+              <Loader/>
+            </div>
+          <div className="modal-action flex justify-center mt-4">
+            <button className="btn" onClick={closeCamera}>
+              Close
+            </button>
           </div>
         </div>
       </dialog>
+      <div className="min-h-[150vh]">hello</div>
     </div>
   );
 }

@@ -6,7 +6,7 @@ export default {
   },
   plugins: [require("daisyui")],
   daisyui: {
-    theses: ["night"]
+    themes: ["cmyk"]
   }
 };
 
