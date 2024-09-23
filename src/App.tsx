@@ -20,6 +20,13 @@ function App() {
         videoElement.srcObject = stream;
         videoElement.play();
       }
+
+      setTimeout(() => {
+        setVerified(false);
+        setTimeout(() => {
+          closeCamera(); 
+        }, 2000);
+      }, 7000)
     } catch (error) {
       toast.error("Error accessing the camera. Please check permissions.");
     }
@@ -27,24 +34,24 @@ function App() {
 
   const handleAuthentication = async () => {
     toast("Authenticating...", { icon: "🔒" });
-    setLoading(true); // Show shimmer effect
+    setLoading(true); 
     
     await getUserVideo();
     setTimeout(() => {
-      setLoading(false); // Stop shimmer after 1 second
+      setLoading(false); 
       setLoader(true);
     }, 1000);
     (document.getElementById("my_modal_1") as HTMLDialogElement)?.showModal();
-
     setTimeout(() => {
       setVerified(true);
-    }, 8000);
+
+    }, 9000);
   };
 
   const closeCamera = () => {
     if (videoStream) {
-      videoStream.getTracks().forEach((track) => track.stop()); // Stop all tracks
-      setVideoStream(null); // Clear video stream
+      videoStream.getTracks().forEach((track) => track.stop()); 
+      setVideoStream(null); 
     }
     (document.getElementById("my_modal_1") as HTMLDialogElement)?.close();
 
@@ -73,15 +80,6 @@ function App() {
       videoElement.play();
     }
   }, [videoElement, videoStream]);
-
-  useEffect(() => {
-    if(verified){
-      setVerified(false);
-      setTimeout(() => {
-        closeCamera();
-      }, 1000);
-    }
-  },[verified])
 
 
 
@@ -121,9 +119,18 @@ function App() {
                 />
               </div>
             )}
-            {verified && <div>
-              <img src={tick} className="absolute top-24 right-[235px] opacity-80" alt="" />
-            </div>}
+            {verified && (
+              <div>
+                <img
+                  src={tick}
+                  className="absolute top-24 right-[245px] opacity-80"
+                  alt=""
+                />
+                <p className="text-xl font-bold text-green-500 absolute right-0 pt-3">
+                  User Authenticated
+                </p>
+              </div>
+            )}
           </div>
           <div>{loader && <Loader />}</div>
           <div className="modal-action flex justify-center mt-4">
