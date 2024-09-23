@@ -48,25 +48,45 @@
 
 .loader {
   position: absolute;
-  bottom: 20px; /* Position the loader at the bottom */
-  left: 0; /* Start from the left */
-  height: 4px; /* Height of the loader */
-  background-color: #12ca05; /* Loader color */
-  width: 0; /* Initially at 0 width */
-  animation: load 3.3s forwards; /* Total duration of 3.3 seconds */
+  bottom: 20px; 
+  left: 0; 
+  height: 4px; 
+  background-color: #12ca05; 
+  width: 0; 
+  animation: load 3.3s forwards; 
 }
 
 @keyframes load {
   0% {
-    width: 0; /* Start at 0 */
+    width: 0; 
   }
   45.45% {
-    width: 33.33%; /* Move to 33.33% at 1.5 seconds */
+    width: 33.33%; 
   }
   69.7% {
-    width: 66.67%; /* Move to 66.67% at 2.3 seconds */
+    width: 66.67%;
   }
   100% {
-    width: 100%; /* Finish at 100% at 3.3 seconds */
+    width: 100%; 
   }
 }
+
+
+.text-container {
+          position: relative;
+          height: 50px; 
+          overflow: hidden;
+          text-align: center; 
+          font-size: 20px; 
+        }
+
+        .text {
+          position: absolute;
+          transition: opacity 0.5s ease, transform 0.5s ease;
+          opacity: 1;
+        }
+
+        .fade-out {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
